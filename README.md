@@ -83,7 +83,7 @@ CREATE TABLE users (
 );
 ```
 
-5. Run `npm run dev` in the root directory to start both the frontend and backend applications
+5. Run `npm run dev` in the root directory to start the backend application
 6. To populate the database with articles do the following `POST` request using Postman or any other API client to `http://localhost:8080/seed`. You can configure the request body to your liking. You need to provide a valid JSON Web token in the body. Here is an example of the request body
 
 ```json
@@ -134,3 +134,9 @@ CREATE TABLE users (
     "sourceName": "Source Name"
 }
 ```
+
+> To improve more this application, I would consider the implementation of automated unit and integration testing. Automated testing provides several benefits, including ensuring code quality, detecting bugs early, and reducing manual testing efforts. Unit tests verify individual components, making it easier to identify issues within specific functions or methods. Integration tests, on the other hand, validate how different components work together, helping to prevent issues in the overall system. Together, these tests increase the reliability, maintainability, and scalability of the codebase, leading to a more stable and high-quality application.
+
+Testing Libraries for Express Applications:
+
+-   Jest: A popular testing framework that provides a simple and flexible way to write test cases.
