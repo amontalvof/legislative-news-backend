@@ -1,18 +1,31 @@
-# Legislative News Aggregator
+# Legislative News Aggregator Backend
 
-## Frontend Application Technologies
+## System Design Considerations
 
--   TypeScript
--   React
--   React Router Dom
--   TanStack Query
--   Material-UI
+1. News Aggregation
+
+    - Aggregation Strategy: Implement a cron job that regularly fetches news articles from external sources. We could use a third-party news APIs. Depending on the requirements, this job could run hourly or daily.
+    - Deduplication: To handle duplicate articles from different sources, I consider implementing a hash-based deduplication mechanism is the best option. Generate a unique hash (based on the title, author, and published date, etc) for each article before saving. If the hash already exists in the database, skip saving the duplicate.
+
+2. Scalability
+
+    - Database Design and Indexing: I use a relational database like MySQL or we can use PostgreSQL also to store articles with indexed fields for state, category, published date, title and description. Indexing these fields will optimize query performance for filtering and searching.
+    - Handling Large Volumes of Data: As the database grows, I consider implementing a data partitioning strategy, especially if each state and topic has a large number of associated articles. This would distribute data across multiple database servers to improve access speed.
+    - API Performance: I use pagination on the /news endpoint to limit the number of articles returned per request, helping to reduce load on both the backend and frontend.
+
+3. Search Optimization
+
+    - Text Search Indexing: For efficient keyword searches in title and description I implement full-text search indexing. Alternatively, We can consider using a dedicated search engine like Elasticsearch if we are going to handle a very high volume of articles, because it’s optimized for fast text searches and can rank results by relevance.
+    - Caching Search Results: Cache frequently searched queries or common filters to reduce database load, particularly if your dataset is very large. You could use Redis or a similar caching mechanism to store popular queries for quick access. In this application I implement a simple in-memory cache to store the search results for a short period of time.
+    - Incremental Updates: If our news sources update regularly, we need to consider implementing incremental updates that only fetch and add new articles to the database, rather than replacing existing articles. This would keep the system’s data fresh without fully re-fetching the entire dataset, which can be resource-intensive.
 
 ## Backend Application Technologies
 
 -   TypeScript
 -   Node.js
 -   Express
+-   Json Web Token
+-   Websockets
 
 ## Database Technologies
 
@@ -21,8 +34,8 @@
 > Steps to run the applications
 
 1.  Clone the repository
-2.  Run `npm install` in the root directory in both frontend and backend directories
-3.  Fill in the `.env` file in the backend directory use the .en.template file as a guide
+2.  Run `npm install` in the root directory
+3.  Fill in the `.env` file, use the `.env.template` file as a guide
 4.  In your MySql database run the fallowing script
 
 ```sql
@@ -57,20 +70,67 @@ ALTER TABLE articles
 ADD FULLTEXT INDEX idx_title_description (title, description);
 
 ALTER TABLE articles ADD UNIQUE (articleId);
+
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    fullname VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    role VARCHAR(255) DEFAULT 'user',
+    preferredTopics JSON,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
 ```
 
 5. Run `npm run dev` in the root directory to start both the frontend and backend applications
-6. To populate the database with articles do the following `POST` request using Postman or any other API client to `http://localhost:8080/seed`. You can configure the request body to your liking. Here is an example of the request body
+6. To populate the database with articles do the following `POST` request using Postman or any other API client to `http://localhost:8080/seed`. You can configure the request body to your liking. You need to provide a valid JSON Web token in the body. Here is an example of the request body
 
 ```json
 {
-    "token": "TOKEN_FROM_ENV_FILE",
+    "token": "JWT_TOKEN",
     "from": "2024-10-03",
     "to": "2024-10-30",
     "pageSize": 5
 }
 ```
 
-7.  Open your browser and navigate to `http://localhost:3000` to view the application
+7.  To get a JWT_TOKEN you need to register a user by sending a `POST` request to `http://localhost:8080/register` with the following request body. Here is an example of the request body, after the register you need to login to get the JWT_TOKEN.
 
-> Note: The application is still in development and more features will be added in the future
+```json
+{
+    "fullName": "John Doe",
+    "email": "john@mail.com",
+    "password": "Password123"
+}
+```
+
+8.  To login send a `POST` request to `http://localhost:8080/login` with the following request body. Here is an example of the request body, after the login you will get the JWT_TOKEN.
+
+```json
+{
+    "email": "john@mail.com",
+    "password": "Password123"
+}
+```
+
+9.  To get the articles send a `GET` request to `GET /news?state=x&topic=y&search=keyword&page=1&pageSize=5` with the following query parameters. As you can notice the endpoint is paginated, you can change the page and pageSize query parameters to get the desired number of articles.
+
+10. To get a single article send a `GET` request to `GET /news/:articleId` with the articleId as a parameter.
+
+11. To add a new article, send a POST request to POST /news with the following request body. The articleId is a unique identifier for each article, generated from a combination of the article's title, author, and publishedAt date to prevent duplicate entries. Below is an example of the request body:
+
+```json
+{
+    "author": "John Doe",
+    "title": "Article Title",
+    "description": "Article Description",
+    "url": "https://www.example.com",
+    "urlToImage": "https://www.example.com/image.jpg",
+    "publishedAt": "2024-10-03T10:15:30Z",
+    "content": "Article Content",
+    "state": "state",
+    "category": "category",
+    "sourceName": "Source Name"
+}
+```
